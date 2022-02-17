@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <script src="https://cdn.jsdelivr.net/pyodide/v0.19.0/full/pyodide.js"></script>
+  </head>
+  <body>
+    <div>status: <span id="status">initializing</span></div>
+    <input id="code" value="" />
+    <button onclick="evaluatePython()">Run</button>
+    <div id="output"></div>
+
+    <script type="text/javascript">
+      const code = document.getElementById("code");
+      
+      async function main(){
+        // pyodideのロード
+        let pyodide = await loadPyodide({
+          indexURL : "https://cdn.jsdelivr.net/pyodide/v0.19.0/full/"
+        });
+        // モジュールを追加する場合
+        await pyodide.loadPackage("numpy");
+        await pyodide.loadPackage("scikit-learn");
+        // 初期化の完了を反映
+        document.getElementById("status").innerHTML = "ready"
+        return pyodide;
+      }
+      let pyodideReadyPromise = main();
+      
+      async function evaluatePython() {
+        let pyodide = await pyodideReadyPromise;
+        try {
+          // Pythonへのinput
+          pyodide.globals.set("x", code.value);
+
+          // Pythonの実行部分
+          let output = pyodide.runPython(`
+            from js import document
+            import numpy as np
+            
+            # printはconsoleに出力される
+            print(type(x), str(x), x.isnumeric())
+            if x.isnumeric():
+              y = float(x) ** 2
+              out = f"{float(x)*np.pi}"
+            else:
+              y = 0
+              out = f"数値を指定してください"
+
+            z = np.ones([3,3])
+
+            # HTMLに直接出力
+            document.getElementById("output").innerHTML = out
+          `);
+
+          // Pythonからの出力の取得
+          let y = pyodide.globals.get('y');
+          console.log(y);
+          let z = pyodide.globals.get('z').toJs();
+          console.log(z);
+
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    </script>
+  </body>
+</html>
